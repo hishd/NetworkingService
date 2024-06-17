@@ -29,6 +29,7 @@ public protocol NetworkDataTransferErrorLogger {
 }
 
 public final class DefaultNetworkDataTransferErrorLogger: NetworkDataTransferErrorLogger {
+    public init(){}
     public func log(error: any Error) {
         printIfDebug("\(error)")
     }

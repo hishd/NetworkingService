@@ -26,12 +26,14 @@ public protocol ResponseDecoder {
 }
 
 public final class JsonResponseDecoder: ResponseDecoder {
+    public init(){}
     public func decode<T: Decodable>(data: Data) throws -> T {
         return try JSONDecoder().decode(T.self, from: data)
     }
 }
 
 public final class RawDataResponseDecoder: ResponseDecoder {
+    public init(){}
     public func decode<T: Decodable>(data: Data) throws -> T {
         if T.self is Data.Type, let data = data as? T {
             return data

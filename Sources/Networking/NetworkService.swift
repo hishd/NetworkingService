@@ -102,6 +102,13 @@ public final class DefaultNetworkService {
     
     private func request(request: URLRequest, completion: @escaping CompletionHandler) -> CancellableHttpRequest {
         let dataTask = sessionManagerType.sessionManager.request(request) { data, response, requestError in
+            if let response = response as? HTTPURLResponse, !(200...300).contains(response.statusCode) {
+                let error: NetworkError = .error(statusCode: response.statusCode, data: data)
+                self.loggerType.logger.log(error: error)
+                completion(.failure(error))
+                return
+            }
+            
             if let requestError = requestError {
                 let error: NetworkError
                 if let response = response as? HTTPURLResponse {
@@ -141,6 +148,9 @@ extension DefaultNetworkService: NetworkService {
         do {
             let request = try endpoint.urlRequest(with: networkConfig)
             return self.request(request: request, completion: completion)
+        } catch let error as NetworkError {
+            completion(.failure(error))
+            return nil
         } catch {
             completion(.failure(.urlGeneration))
             return nil
@@ -149,6 +159,7 @@ extension DefaultNetworkService: NetworkService {
 }
 
 public final class DefaultNetworkSessionManager: NetworkSessionManager {
+    public init(){}
     public func request(_ request: URLRequest, completion: @escaping CompletionHandler) -> any CancellableHttpRequest {
         let task = URLSession.shared.dataTask(with: request, completionHandler: completion)
         task.resume()
@@ -157,6 +168,7 @@ public final class DefaultNetworkSessionManager: NetworkSessionManager {
 }
 
 public final class DefaultNetworkDataLogger: NetworkLogger {
+    public init(){}
     #if os(iOS)
     private func printData(request: URLRequest) {
         Logger.viewCycle.error("----NETWORK REQUEST----")
