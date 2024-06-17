@@ -1,5 +1,5 @@
 import XCTest
-@testable import Networking
+@testable import NetworkingService
 
 final class NetworkingTests: XCTestCase {
     
@@ -33,7 +33,7 @@ final class NetworkingTests: XCTestCase {
         let task = await networkDataTransferService.request(with: endpoint)
         
         do {
-            let items = try await task.value
+            let items: [ResponseObject] = try await task.value
             XCTAssertEqual(items.count, expectedCount)
         } catch {
             XCTFail("Failed tests with error: \(error)")
