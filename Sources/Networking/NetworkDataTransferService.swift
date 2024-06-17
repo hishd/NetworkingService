@@ -37,16 +37,24 @@ public final class DefaultNetworkDataTransferErrorLogger: NetworkDataTransferErr
 
 public protocol NetworkDataTransferService {
     typealias CompletionHandler<T> = (Result<T, NetworkDataTransferError>) -> Void
+    @available(macOS 10.15, *)
+    @available(iOS 16, *)
+    typealias TaskType<T> = Task<T, Error>
     
     func request<T: Decodable, E: RequestableEndpoint>(
         with endpoint: E,
         on queue: NetworkDataTransferQueue,
         completion: @escaping CompletionHandler<T>
     ) -> CancellableHttpRequest? where E.ResponseType == T
+    
     func request<T: Decodable, E: RequestableEndpoint>(
         with endpoint: E,
         completion: @escaping CompletionHandler<T>
     ) -> CancellableHttpRequest? where E.ResponseType == T
+    
+    @available(macOS 10.15, *)
+    @available(iOS 16, *)
+    func request<T: Decodable, E: RequestableEndpoint>(with endpoint: E) async -> TaskType<T> where E.ResponseType == T
 }
 
 public final class DefaultNetworkDataTransferService {
@@ -60,6 +68,19 @@ public final class DefaultNetworkDataTransferService {
 }
 
 extension DefaultNetworkDataTransferService: NetworkDataTransferService {
+    @available(macOS 10.15, *)
+    @available(iOS 16, *)
+    public func request<T:Decodable, E: RequestableEndpoint>(with endpoint: E) async -> TaskType<T> where T == E.ResponseType {
+        let task = Task {
+            let responseData = try await networkService.request(endpoint: endpoint).value
+            let decodedData:T = try self.decode(data: responseData, decoder: endpoint.responseDecoder)
+            
+            return decodedData
+        }
+        
+        return task
+    }
+    
     public func request<T: Decodable, E: RequestableEndpoint>(
         with endpoint: E,
         on queue: any NetworkDataTransferQueue,
@@ -122,6 +143,18 @@ extension DefaultNetworkDataTransferService: NetworkDataTransferService {
             return .failure(NetworkDataTransferError.parsing(error))
         }
     }
+    
+    private func decode<T: Decodable>(data: Data?, decoder: ResponseDecoder) throws -> T {
+        do {
+            guard let data = data else {
+                throw NetworkDataTransferError.noResponse
+            }
+            
+            let decoded: T = try decoder.decode(data: data)
+            return decoded
+        } catch {
+            self.logger.log(error: error)
+            throw NetworkDataTransferError.parsing(error)
+        }
+    }
 }
-
-
