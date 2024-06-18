@@ -35,12 +35,24 @@ public protocol CancellableHttpRequest {
     func cancel()
 }
 
+public class CancellableHttpRequestCollection {
+    private (set) var requests: [CancellableHttpRequest] = []
+    
+    func add(request: CancellableHttpRequest) {
+        requests.append(request)
+    }
+    
+    func cancelAll() {
+        for request in requests {
+            request.cancel()
+        }
+    }
+}
+
 extension URLSessionDataTask: CancellableHttpRequest{}
 
 public protocol NetworkService {
     typealias CompletionHandler = (Result<Data?, NetworkError>) -> Void
-    @available(macOS 10.15, *)
-    @available(iOS 16, *)
     typealias TaskType = Task<Data, Error>
     
     func request(endpoint: any RequestableEndpoint, completion: @escaping CompletionHandler) -> CancellableHttpRequest?
@@ -51,8 +63,6 @@ public protocol NetworkService {
 
 public protocol NetworkSessionManager {
     typealias CompletionHandler = (Data?, URLResponse?, Error?) -> Void
-    @available(macOS 10.15, *)
-    @available(iOS 16, *)
     typealias TaskType = Task<(Data, URLResponse), Error>
     
     func request(_ request: URLRequest, completion: @escaping CompletionHandler) -> CancellableHttpRequest
