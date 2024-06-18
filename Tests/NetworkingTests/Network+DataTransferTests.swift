@@ -10,6 +10,14 @@ final class NetworkingTests: XCTestCase {
         let createdAt: String
     }
     
+    let testIds = Array((0...10)).map(String.init)
+    
+    var testEndpoints: [ApiEndpoint<ResponseObject>] {
+        return testIds.map { id in
+                .init(path: id, method: .get, responseDecoder: JsonResponseDecoder())
+        }
+    }
+    
     private var networkConfig: ApiNetworkConfig {
         let url = URL(string: "https://666918ba2e964a6dfed3ced7.mockapi.io/users")
         return .init(baseUrl: url!)
@@ -25,6 +33,24 @@ final class NetworkingTests: XCTestCase {
     
     private var networkDataTransferService: DefaultNetworkDataTransferService {
         return .init(networkService: networkService, logger: DefaultNetworkDataTransferErrorLogger())
+    }
+    
+    @available(iOS 16, *)
+    func test_async_multiple_requests_returns_result() async {
+        let expectedResult = "Beulah Bins"
+        let index = 5
+        let key: KeyPath<ResponseObject, String> = \.name
+        
+        let task = await networkDataTransferService.request(with: testEndpoints)
+        
+        do {
+            let items: [ResponseObject] = try await task.value
+            let item = items[index]
+            let value = item[keyPath: key]
+            XCTAssertEqual(value, expectedResult)
+        } catch {
+            XCTFail("Failed \(#function) with error: \(error)")
+        }
     }
     
     @available(iOS 16, *)

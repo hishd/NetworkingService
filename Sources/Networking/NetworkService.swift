@@ -39,8 +39,6 @@ extension URLSessionDataTask: CancellableHttpRequest{}
 
 public protocol NetworkService {
     typealias CompletionHandler = (Result<Data?, NetworkError>) -> Void
-    @available(macOS 10.15, *)
-    @available(iOS 16, *)
     typealias TaskType = Task<Data, Error>
     
     func request(endpoint: any RequestableEndpoint, completion: @escaping CompletionHandler) -> CancellableHttpRequest?
@@ -51,8 +49,6 @@ public protocol NetworkService {
 
 public protocol NetworkSessionManager {
     typealias CompletionHandler = (Data?, URLResponse?, Error?) -> Void
-    @available(macOS 10.15, *)
-    @available(iOS 16, *)
     typealias TaskType = Task<(Data, URLResponse), Error>
     
     func request(_ request: URLRequest, completion: @escaping CompletionHandler) -> CancellableHttpRequest

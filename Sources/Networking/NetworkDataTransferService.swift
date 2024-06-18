@@ -37,9 +37,8 @@ public final class DefaultNetworkDataTransferErrorLogger: NetworkDataTransferErr
 
 public protocol NetworkDataTransferService {
     typealias CompletionHandler<T> = (Result<T, NetworkDataTransferError>) -> Void
-    @available(macOS 10.15, *)
-    @available(iOS 16, *)
     typealias TaskType<T> = Task<T, Error>
+    typealias TaskTypeCollection<T> = Task<[T], Error>
     
     func request<T: Decodable, E: RequestableEndpoint>(
         with endpoint: E,
@@ -55,6 +54,10 @@ public protocol NetworkDataTransferService {
     @available(macOS 10.15, *)
     @available(iOS 16, *)
     func request<T: Decodable, E: RequestableEndpoint>(with endpoint: E) async -> TaskType<T> where E.ResponseType == T
+    
+    @available(iOS 16, *)
+    @available(macOS 10.15, *)
+    func request<T: Decodable, E: RequestableEndpoint>(with endpoints: [E]) async -> TaskTypeCollection<T> where E.ResponseType == T
 }
 
 public final class DefaultNetworkDataTransferService {
@@ -68,6 +71,34 @@ public final class DefaultNetworkDataTransferService {
 }
 
 extension DefaultNetworkDataTransferService: NetworkDataTransferService {
+    
+    @available(macOS 10.15, *)
+    @available(iOS 16, *)
+    public func request<T: Decodable, E: RequestableEndpoint>(with endpoints: [E]) async -> TaskTypeCollection<T> where T == E.ResponseType {
+        
+        let task: TaskTypeCollection = Task {
+            let responseData = try await withThrowingTaskGroup(of: T.self, returning: [T].self) { taskGroup in
+                for endpoint in endpoints {
+                    taskGroup.addTask {
+                        try await self.request(with: endpoint).value
+                    }
+                }
+                
+                var data: [T] = []
+                
+                for try await item in taskGroup {
+                    data.append(item)
+                }
+                
+                return data
+            }
+            
+            return responseData
+        }
+        
+        return task
+    }
+    
     @available(macOS 10.15, *)
     @available(iOS 16, *)
     public func request<T:Decodable, E: RequestableEndpoint>(with endpoint: E) async -> TaskType<T> where T == E.ResponseType {
