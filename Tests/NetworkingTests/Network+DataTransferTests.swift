@@ -35,6 +35,27 @@ final class NetworkingTests: XCTestCase {
         return .init(networkService: networkService, logger: DefaultNetworkDataTransferErrorLogger())
     }
     
+    func test_multiple_requests_returns_result() {
+        let expectation = expectation(description: "Fetching results from remote")
+        let expectedResult = "Tomas Grant"
+        let id = 5
+        let key: KeyPath<ResponseObject, String> = \.name
+        
+        let _ = networkDataTransferService.request(with: self.testEndpoints, on: DispatchQueue.global()) { result in
+            switch result {
+            case .success(let data):
+                let item: ResponseObject = data.first{$0.id == String(id)}!
+                let value = item[keyPath: key]
+                XCTAssertEqual(value, expectedResult)
+                expectation.fulfill()
+            case .failure(let error):
+                XCTFail("Failed \(#function) with error: \(error)")
+            }
+        }
+        
+        wait(for: [expectation], timeout: 5.0)
+    }
+    
     @available(iOS 16, *)
     func test_async_multiple_requests_returns_result() async {
         let expectedResult = "Beulah Bins"
