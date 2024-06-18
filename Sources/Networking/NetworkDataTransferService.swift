@@ -37,6 +37,7 @@ public final class DefaultNetworkDataTransferErrorLogger: NetworkDataTransferErr
 
 public protocol NetworkDataTransferService {
     typealias CompletionHandler<T> = (Result<T, NetworkDataTransferError>) -> Void
+    typealias CompletionHandlerCollection<T> = (Result<[T], NetworkDataTransferError>) -> Void
     typealias TaskType<T> = Task<T, Error>
     typealias TaskTypeCollection<T> = Task<[T], Error>
     
@@ -50,6 +51,17 @@ public protocol NetworkDataTransferService {
         with endpoint: E,
         completion: @escaping CompletionHandler<T>
     ) -> CancellableHttpRequest? where E.ResponseType == T
+    
+    func request<T: Decodable, E: RequestableEndpoint>(
+        with endpoints: [E],
+        on queue: NetworkDataTransferQueue,
+        completion: @escaping CompletionHandlerCollection<T>
+    ) -> CancellableHttpRequestCollection where E.ResponseType == T
+    
+    func request<T: Decodable, E: RequestableEndpoint>(
+        with endpoints: [E],
+        completion: @escaping CompletionHandlerCollection<T>
+    ) -> CancellableHttpRequestCollection where E.ResponseType == T
     
     @available(macOS 10.15, *)
     @available(iOS 16, *)
@@ -68,9 +80,87 @@ public final class DefaultNetworkDataTransferService {
         self.networkService = networkService
         self.logger = logger
     }
+    
+    private func executeRequest<E: RequestableEndpoint ,T: Decodable>(endpoint: E, group: DispatchGroup, completion: @escaping CompletionHandler<T>) -> CancellableHttpRequest? where T == E.ResponseType {
+        group.enter()
+        return networkService.request(endpoint: endpoint) { result in
+            let completionResult: Result<T, NetworkDataTransferError>
+            
+            defer {
+                completion(completionResult)
+            }
+            
+            switch result {
+            case .success(let data):
+                let result: Result<T, NetworkDataTransferError> = self.decode(data: data, decoder: endpoint.responseDecoder)
+                completionResult = result
+            case .failure(let error):
+                self.logger.log(error: error)
+                completionResult = .failure(.networkFailure(error))
+            }
+            
+            group.leave()
+        }
+    }
 }
 
 extension DefaultNetworkDataTransferService: NetworkDataTransferService {
+    
+    public func request<T: Decodable, E: RequestableEndpoint>(with endpoints: [E], on queue: any NetworkDataTransferQueue, completion: @escaping CompletionHandlerCollection<T>) -> CancellableHttpRequestCollection where T == E.ResponseType {
+        let dispatchGroup = DispatchGroup()
+        let requestCollection = CancellableHttpRequestCollection()
+        var results: [T] = []
+        
+        for endpoint in endpoints {
+            let request = self.executeRequest(endpoint: endpoint, group: dispatchGroup) { result in
+                switch result {
+                case .success(let data):
+                    results.append(data)
+                case .failure(let error):
+                    self.logger.log(error: error)
+                }
+            }
+            
+            if let request = request {
+                requestCollection.add(request: request)
+            }
+        }
+        
+        dispatchGroup.notify(queue: queue as! DispatchQueue) {
+            printIfDebug("====Notifying from group====")
+            completion(.success(results))
+        }
+        
+        return requestCollection
+    }
+    
+    public func request<T: Decodable, E: RequestableEndpoint>(with endpoints: [E], completion: @escaping CompletionHandlerCollection<T>) -> CancellableHttpRequestCollection where T == E.ResponseType {
+        let dispatchGroup = DispatchGroup()
+        let requestCollection = CancellableHttpRequestCollection()
+        var results: [T] = []
+        
+        for endpoint in endpoints {
+            let request = self.executeRequest(endpoint: endpoint, group: dispatchGroup) { result in
+                switch result {
+                case .success(let data):
+                    results.append(data)
+                case .failure(let error):
+                    self.logger.log(error: error)
+                }
+            }
+            
+            if let request = request {
+                requestCollection.add(request: request)
+            }
+        }
+        
+        dispatchGroup.notify(queue: .global()) {
+            printIfDebug("====Notifying from group====")
+            completion(.success(results))
+        }
+        
+        return requestCollection
+    }
     
     @available(macOS 10.15, *)
     @available(iOS 16, *)
