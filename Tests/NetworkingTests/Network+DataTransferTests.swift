@@ -14,7 +14,7 @@ final class NetworkingTests: XCTestCase {
     
     var testEndpoints: [ApiEndpoint<ResponseObject>] {
         return testIds.map { id in
-                .init(path: id, method: .get, responseDecoder: JsonResponseDecoder())
+                .init(path: .path(id), method: .get, responseDecoder: JsonResponseDecoder())
         }
     }
     
@@ -24,7 +24,7 @@ final class NetworkingTests: XCTestCase {
     }
     
     private var endpoint: ApiEndpoint<[ResponseObject]> {
-        return .init(path: "all", method: .get, responseDecoder: JsonResponseDecoder())
+        return .init(path: .path("all"), method: .get, responseDecoder: JsonResponseDecoder())
     }
     
     private var networkService: DefaultNetworkService {

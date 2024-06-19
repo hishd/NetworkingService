@@ -43,11 +43,16 @@ public final class RawDataResponseDecoder: ResponseDecoder {
     }
 }
 
+public enum PathType {
+    case fullPath(String)
+    case path(String)
+}
+
 public protocol RequestableEndpoint {
     
     associatedtype ResponseType
     
-    var path: String {get}
+    var path: PathType {get}
     var method: HTTPMethodType {get}
     var headerParameters: [String: String] {get}
     var queryParameters: [String: Any] {get}
@@ -60,7 +65,7 @@ public protocol RequestableEndpoint {
 public final class ApiEndpoint<T>: RequestableEndpoint {
     public typealias ResponseType = T
     
-    public let path: String
+    public let path: PathType
     public let method: HTTPMethodType
     public let headerParameters: [String : String]
     public let queryParameters: [String : Any]
@@ -68,12 +73,12 @@ public final class ApiEndpoint<T>: RequestableEndpoint {
     public let responseDecoder: any ResponseDecoder
     
     public init(
-        path: String,
+        path: PathType,
         method: HTTPMethodType,
         headerParameters: [String : String] = [:],
         queryParameters: [String : Any] = [:],
         bodyParameters: [String : Any] = [:],
-        responseDecoder: any ResponseDecoder
+        responseDecoder: any ResponseDecoder = JsonResponseDecoder()
     ) {
         self.path = path
         self.method = method
@@ -93,7 +98,12 @@ public enum HttpEndpointGenerationError: Error {
 public extension RequestableEndpoint {
     private func url(with networkConfig: ApiNetworkConfig) throws -> URL {
         let baseUrl = networkConfig.baseUrl.absoluteString.last != "/" ? networkConfig.baseUrl.absoluteString + "/" : networkConfig.baseUrl.absoluteString
-        let endpoint = baseUrl.appending(path)
+        let endpoint: String = switch path {
+        case .fullPath(let path):
+            path
+        case .path(let path):
+            baseUrl.appending(path)
+        }
         
         guard var urlComponents = URLComponents(string: endpoint) else {
             throw HttpEndpointGenerationError.componentsError
