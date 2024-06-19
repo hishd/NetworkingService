@@ -112,11 +112,11 @@ public extension NetworkLoggerType {
 }
 
 public final class DefaultNetworkService {
-    private let networkConfig: ApiNetworkConfig
+    private let networkConfig: ApiNetworkConfig?
     private let sessionManagerType: NetworkSessionManagerType
     private let loggerType: NetworkLoggerType
     
-    public init(networkConfig: ApiNetworkConfig, sessionManagerType: NetworkSessionManagerType, loggerType: NetworkLoggerType) {
+    public init(networkConfig: ApiNetworkConfig?, sessionManagerType: NetworkSessionManagerType, loggerType: NetworkLoggerType) {
         self.networkConfig = networkConfig
         self.sessionManagerType = sessionManagerType
         self.loggerType = loggerType
