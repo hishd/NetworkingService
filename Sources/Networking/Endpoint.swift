@@ -59,7 +59,7 @@ public protocol RequestableEndpoint {
     var bodyParameters: [String: Any] {get}
     var responseDecoder: any ResponseDecoder {get}
     
-    func urlRequest(with networkConfig: ApiNetworkConfig) throws -> URLRequest
+    func urlRequest(with networkConfig: ApiNetworkConfig?) throws -> URLRequest
 }
 
 public final class ApiEndpoint<T>: RequestableEndpoint {
@@ -96,13 +96,19 @@ public enum HttpEndpointGenerationError: Error {
 }
 
 public extension RequestableEndpoint {
-    private func url(with networkConfig: ApiNetworkConfig) throws -> URL {
-        let baseUrl = networkConfig.baseUrl.absoluteString.last != "/" ? networkConfig.baseUrl.absoluteString + "/" : networkConfig.baseUrl.absoluteString
-        let endpoint: String = switch path {
+    private func url(with networkConfig: ApiNetworkConfig?) throws -> URL {
+        let endpoint: String
+        
+        switch path {
         case .fullPath(let path):
-            path
+            endpoint = path
         case .path(let path):
-            baseUrl.appending(path)
+            if let baseUrl = networkConfig?.baseUrl {
+                let url = baseUrl.absoluteString.last != "/" ? baseUrl.absoluteString + "/" : baseUrl.absoluteString
+                endpoint = url.appending(path)
+            } else {
+                throw HttpEndpointGenerationError.urlGenerationError
+            }
         }
         
         guard var urlComponents = URLComponents(string: endpoint) else {
@@ -115,7 +121,7 @@ public extension RequestableEndpoint {
             queryItems.append(URLQueryItem(name: key, value: "\(value)"))
         }
         
-        networkConfig.queryParameters.forEach { (key, value) in
+        networkConfig?.queryParameters.forEach { (key, value) in
             queryItems.append(URLQueryItem(name: key, value: "\(value)"))
         }
         
@@ -128,10 +134,10 @@ public extension RequestableEndpoint {
         return url
     }
     
-    func urlRequest(with networkConfig: ApiNetworkConfig) throws -> URLRequest {
+    func urlRequest(with networkConfig: ApiNetworkConfig?) throws -> URLRequest {
         let url = try self.url(with: networkConfig)
         var urlRequest = URLRequest(url: url)
-        var allHeaders: [String: String] = networkConfig.headers
+        var allHeaders: [String: String] = networkConfig?.headers ?? .init()
         headerParameters.forEach { (key, value) in
             allHeaders.updateValue(value, forKey: key)
         }
