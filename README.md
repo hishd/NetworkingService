@@ -1,4 +1,4 @@
-﻿# NetworkingService
+# NetworkingService
 >Networking service is a http networking library developed on top of swift URLSession api. The library is capable of performing http network requests to REST api endpoints.
 
 ## Available Types
@@ -44,20 +44,32 @@ This below types confirms to this abstract type.
 
 A protocol type which is used to create blueprints of a endpoints. It contains the below properties and methods,
 
- - **var** path: String {**get**}
+ - **var** path: PathType {**get**}
 - **var**  method: HTTPMethodType {**get**}
 - **var**  headerParameters: [String: String] {**get**}
 - **var**  queryParameters: [String: **Any**] {**get**}
 - **var** bodyParameters: [String: **Any**] {**get**}
 - **var**  responseDecoder: **any**  ResponseDecoder {**get**}
-- **func** urlRequest(with networkConfig: ApiNetworkConfig) **throws** -> URLRequest
+- **func** urlRequest(with networkConfig: ApiNetworkConfig?) **throws** -> URLRequest
 
 The **ApiEndpoint** is a concrete type which confirms to the **RequestableEndpoint**. When creating an instance of this type, make sure to provide a **Decodable** type for the Generic placeholder **T**.
+
+> Note: The **PathType** enum contains two cases (fullPath, path) with a associated String value for a url. The case **fullPath** is used when it's not a sub router path. The case **path** is used when it's a router path.
+> ex: If the base url is https://666918ba2e964a6dfed3ced7.mockapi.io/users
+> the Full path = https://666918ba2e964a6dfed3ced7.mockapi.io/users/all
+> the Path = all 
 
 ex: 
 ```
 private  var  endpoint: ApiEndpoint<[ResponseObject]> {
-	return .init(path: "all", method: .get, responseDecoder: JsonResponseDecoder())
+    return .init(path: .path("all"), method: .get, responseDecoder: JsonResponseDecoder())
+}
+```
+
+ex: 
+```
+private  var  endpoint: ApiEndpoint<[ResponseObject]> {
+    return .init(path: .fullPath("https://666918ba2e964a6dfed3ced7.mockapi.io/users/all"), method: .get, responseDecoder: JsonResponseDecoder())
 }
 ```
 
@@ -110,20 +122,29 @@ A protocol type which contains the below methods,
 
 - **func**  request<T: Decodable, E: RequestableEndpoint>(with endpoint: E, completion: **@escaping**  CompletionHandler<T>) -> CancellableHttpRequest? **where** E.ResponseType == T
 
+- **func**  request<T: Decodable, E: RequestableEndpoint>(with endpoints: [E], on queue: NetworkDataTransferQueue, completion: **@escaping**  CompletionHandlerCollection<T>) -> CancellableHttpRequestCollection  **where** E.ResponseType == T
+
+- **func**  request<T: Decodable, E: RequestableEndpoint>(with endpoints: [E], completion: **@escaping**  CompletionHandlerCollection<T>) -> CancellableHttpRequestCollection  **where** E.ResponseType == T
+
 - **func** request<T: Decodable, E: RequestableEndpoint>(with endpoint: E) **async** -> TaskType<T> **where** E.ResponseType == T
+
+- **func** request<T: Decodable, E: RequestableEndpoint>(with endpoints: [E]) **async** -> TaskTypeCollection<T> **where** E.ResponseType == T
 
 The **DefaultNetworkDataTransferService** is a concrete type which confirms to the **NetworkDataTransferService** protocol. The class contains the below properties and these will be initialized through the designated initializer.
 
 - networkService: **NetworkService**
-- logger: **NetworkDataTransferErrorLogger** - this is a optional property
+- logger: **NetworkDataTransferErrorLogger** - this is a optional property, the default logger will be used, which uses OSLog api.
 
 The below methods perform http requests through the provided network service and the response of type **Data** will be deserialized (converted) into the provided decodable types.
 
 |Method|Description  |
 |--|--|
 | **func**  request<T: Decodable, E: RequestableEndpoint>(with endpoint: E, on queue: NetworkDataTransferQueue, completion:  **@escaping**  CompletionHandler ) -> CancellableHttpRequest?  **where**  E.ResponseType == T | This method will execute the request and executes the completion handler on the provided **DispatchQueue**.|
-| **func**  request<T: Decodable, E: RequestableEndpoint>(with endpoint: E, completion:  **@escaping**  CompletionHandler) -> CancellableHttpRequest?  **where**  E.ResponseType == T | This method will execute the request and executes the completion handler |
+| **func**  request<T: Decodable, E: RequestableEndpoint>(with endpoint: E, completion:  **@escaping**  CompletionHandler) -> CancellableHttpRequest?  **where**  E.ResponseType == T | This method will execute the request and executes the completion handler. |
+|**func**  request<T: Decodable, E: RequestableEndpoint>(with endpoints: [E], on queue: NetworkDataTransferQueue, completion: **@escaping**  CompletionHandlerCollection<T>) -> CancellableHttpRequestCollection  **where** E.ResponseType == T|This method will execute multiple http requests based on the provided url endpoints and executes the completion handler on the provided **DispatchQueue**.|
+|**func**  request<T: Decodable, E: RequestableEndpoint>(with endpoints: [E], completion: **@escaping**  CompletionHandlerCollection<T>) -> CancellableHttpRequestCollection  **where** E.ResponseType == T|This method will execute multiple http requests based on the provided endpoints and executes the completion handler.|
 | **func**  request<T: Decodable, E: RequestableEndpoint>(with endpoint: E)  **async**  -> TaskType  **where**  E.ResponseType == T | This async method will return a task which can be later executed by the caller. This task can also be cancelled. |
+|**func** request<T: Decodable, E: RequestableEndpoint>(with endpoints: [E]) **async** -> TaskTypeCollection<T> **where** E.ResponseType == T|This async method will return a parent task which can be later executed by the caller. This parent task can also be cancelled, which will result in cancelling all the child tasks. |
 
 ## Usage
 
@@ -131,10 +152,10 @@ The below methods perform http requests through the provided network service and
 
 ```
 struct  ResponseObject: Decodable {
-	let id: String
-	let avatar: String
-	let name: String
-	let createdAt: String
+    let id: String
+    let avatar: String
+    let name: String
+    let createdAt: String
 }
 ```
 
@@ -149,20 +170,20 @@ Creation of instances of below types,
 
 ```
 private var networkConfig: ApiNetworkConfig {
-	let url = URL(string: "https://666918ba2e964a6dfed3ced7.mockapi.io/users")
-	return .init(baseUrl: url!)
+    let url = URL(string: "https://666918ba2e964a6dfed3ced7.mockapi.io/users")
+    return .init(baseUrl: url!)
 }
 
 private var endpoint: ApiEndpoint<[ResponseObject]> {
-	return .init(path: "all", method: .get, responseDecoder: JsonResponseDecoder())
+    return .init(path: .path("all"), method: .get, responseDecoder: JsonResponseDecoder())
 }
 
 private var networkService: DefaultNetworkService {
-	return .init(networkConfig: networkConfig, sessionManagerType: .defaultType, loggerType: .defaultType)
+    return .init(networkConfig: networkConfig, sessionManagerType: .defaultType, loggerType: .defaultType)
 }
 
 private varnetworkDataTransferService: DefaultNetworkDataTransferService {
-	return .init(networkService: networkService, logger: DefaultNetworkDataTransferErrorLogger())
+    return .init(networkService: networkService, logger: DefaultNetworkDataTransferErrorLogger())
 }
 ```
 
@@ -170,12 +191,12 @@ private varnetworkDataTransferService: DefaultNetworkDataTransferService {
 
 ```
 let cancellableRequest = networkDataTransferService.request(with: endpoint) { result in
-	switch result {
-		case .success(**let** data):
-			let items: [ResponseObject] = data
-		case .failure(**let** error):
-			print(error)
-	}
+    switch result {
+        case .success(**let** data):
+            let items: [ResponseObject] = data
+        case .failure(**let** error):
+            print(error)
+    }
 }
 
 //Cancel request if no longer needed
@@ -187,8 +208,8 @@ cancellableRequest.cancel()
 ```
 let task = await networkDataTransferService.request(with: endpoint)
 do {
-	let items: [ResponseObject] = try await task.value
+    let items: [ResponseObject] = try await task.value
 } catch {
-	print(error)
+    print(error)
 }
 ```
