@@ -8,9 +8,17 @@ final class NetworkingTests: XCTestCase {
         let avatar: String
         let name: String
         let createdAt: String
+        
+        var _id: Int {
+            guard let id = Int(id) else {
+                fatalError("Invalid format id: \(id)")
+            }
+            
+            return Int(id)
+        }
     }
     
-    let testIds = Array((0...10)).map(String.init)
+    let testIds = Array((1...10)).map(String.init)
     
     var testEndpoints: [ApiEndpoint<ResponseObject>] {
         return testIds.map { id in
@@ -19,12 +27,12 @@ final class NetworkingTests: XCTestCase {
     }
     
     private var networkConfig: ApiNetworkConfig {
-        let url = URL(string: "https://666918ba2e964a6dfed3ced7.mockapi.io/users")
+        let url = URL(string: "https://6751156e69dc1669ec1d0c49.mockapi.io/users")
         return .init(baseUrl: url!)
     }
     
     private var endpoint: ApiEndpoint<[ResponseObject]> {
-        return .init(path: .path("all"), method: .get, responseDecoder: JsonResponseDecoder())
+        return .init(path: .path("/"), method: .get, responseDecoder: JsonResponseDecoder())
     }
     
     private var networkService: DefaultNetworkService {
@@ -39,7 +47,7 @@ final class NetworkingTests: XCTestCase {
         let expectation = expectation(description: "Fetching results from remote")
         let expectedCount = 10
         
-        let endpoint: ApiEndpoint<[ResponseObject]> = .init(path: .urlPath("https://666918ba2e964a6dfed3ced7.mockapi.io/users/all"), method: .get)
+        let endpoint: ApiEndpoint<[ResponseObject]> = .init(path: .urlPath("https://6751156e69dc1669ec1d0c49.mockapi.io/users"), method: .get)
         let service: DefaultNetworkService = .init(networkConfig: nil, sessionManagerType: .defaultType, loggerType: .defaultType)
         let networkDataTransferService: DefaultNetworkDataTransferService = .init(networkService: service, logger: DefaultNetworkDataTransferErrorLogger())
         
@@ -99,8 +107,8 @@ final class NetworkingTests: XCTestCase {
     
     func test_multiple_requests_returns_result() {
         let expectation = expectation(description: "Fetching results from remote")
-        let expectedResult = "Tomas Grant"
-        let id = 5
+        let expectedResult = "Leona Schultz"
+        let id = 1
         let key: KeyPath<ResponseObject, String> = \.name
         
         let _ = networkDataTransferService.request(with: self.testEndpoints, on: DispatchQueue.global()) { result in
@@ -120,18 +128,23 @@ final class NetworkingTests: XCTestCase {
     
     @available(iOS 16, *)
     func test_async_multiple_requests_returns_result() async {
-        let expectedResult = "Beulah Bins"
-        let index = 5
+        let expectedResult = "Evelyn Cronin"
+        let index = 9
         let key: KeyPath<ResponseObject, String> = \.name
         
         let task = await networkDataTransferService.request(with: testEndpoints)
         
+        testEndpoints.forEach { endpoint in
+            print("=======Endpoint \(endpoint.path)=======")
+        }
+        
         do {
-            let items: [ResponseObject] = try await task.value
+            let items: [ResponseObject] = try await task.value.sorted { $0._id < $1._id }
             let item = items[index]
             let value = item[keyPath: key]
             XCTAssertEqual(value, expectedResult)
-        } catch {
+        }
+        catch {
             XCTFail("Failed \(#function) with error: \(error)")
         }
     }
@@ -178,7 +191,7 @@ final class NetworkingTests: XCTestCase {
     
     func test_decode_network_service_result() {
         let expectation = expectation(description: "Fetching results from remote")
-        let expectedString = "Ms. Luke Strosin"
+        let expectedString = "Leona Schultz"
         
         let _ = networkDataTransferService.request(with: endpoint) { result in
             switch result {
