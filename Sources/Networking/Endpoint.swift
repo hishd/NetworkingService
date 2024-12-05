@@ -44,7 +44,7 @@ public final class RawDataResponseDecoder: ResponseDecoder {
 }
 
 public enum PathType {
-    case fullPath(String)
+    case urlPath(String)
     case path(String)
 }
 
@@ -100,7 +100,7 @@ public extension RequestableEndpoint {
         let endpoint: String
         
         switch path {
-        case .fullPath(let path):
+        case .urlPath(let path):
             endpoint = path
         case .path(let path):
             if let baseUrl = networkConfig?.baseUrl {

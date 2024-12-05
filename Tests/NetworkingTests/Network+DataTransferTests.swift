@@ -39,7 +39,7 @@ final class NetworkingTests: XCTestCase {
         let expectation = expectation(description: "Fetching results from remote")
         let expectedCount = 10
         
-        let endpoint: ApiEndpoint<[ResponseObject]> = .init(path: .fullPath("https://666918ba2e964a6dfed3ced7.mockapi.io/users/all"), method: .get)
+        let endpoint: ApiEndpoint<[ResponseObject]> = .init(path: .urlPath("https://666918ba2e964a6dfed3ced7.mockapi.io/users/all"), method: .get)
         let service: DefaultNetworkService = .init(networkConfig: nil, sessionManagerType: .defaultType, loggerType: .defaultType)
         let networkDataTransferService: DefaultNetworkDataTransferService = .init(networkService: service, logger: DefaultNetworkDataTransferErrorLogger())
         
@@ -70,7 +70,7 @@ final class NetworkingTests: XCTestCase {
         let expectation = expectation(description: "Fetching results from remote")
         let expectedCount = 10
         
-        let endpoint: ApiEndpoint<[ResponseObject]> = .init(path: .fullPath("https://666918ba2e964a6dfed3ced7.mockapi.io/users/all"), method: .get)
+        let endpoint: ApiEndpoint<[ResponseObject]> = .init(path: .urlPath("https://666918ba2e964a6dfed3ced7.mockapi.io/users/all"), method: .get)
         let service: DefaultNetworkService = .init(networkConfig: networkConfig, sessionManagerType: .defaultType, loggerType: .defaultType)
         let networkDataTransferService: DefaultNetworkDataTransferService = .init(networkService: service, logger: DefaultNetworkDataTransferErrorLogger())
         
