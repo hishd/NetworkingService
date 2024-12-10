@@ -18,21 +18,6 @@ public protocol NetworkService {
     func request(endpoint: any RequestableEndpoint) async -> TaskType
 }
 
-public protocol NetworkSessionManager {
-    typealias CompletionHandler = (Data?, URLResponse?, Error?) -> Void
-    typealias TaskType = Task<(Data, URLResponse), Error>
-    
-    func request(_ request: URLRequest, completion: @escaping CompletionHandler) -> CancellableHttpRequest
-    @available(macOS 10.15, *)
-    @available(iOS 16, *)
-    func request(_ request: URLRequest) async throws -> TaskType
-}
-
-public enum NetworkSessionManagerType {
-    case defaultType
-    case customType(type: NetworkSessionManager)
-}
-
 public protocol NetworkLogger {
     func log(request: URLRequest)
     func log(responseData data: Data?, response: URLResponse?)
@@ -45,17 +30,6 @@ public enum NetworkLoggerType {
 }
 
 //MARK: Concrete Implementation
-
-public extension NetworkSessionManagerType {
-    var sessionManager: NetworkSessionManager {
-        switch self {
-        case .defaultType:
-            return DefaultNetworkSessionManager()
-        case .customType(let customType):
-            return customType
-        }
-    }
-}
 
 public extension NetworkLoggerType {
     var logger: NetworkLogger {
@@ -175,26 +149,6 @@ extension DefaultNetworkService: NetworkService {
             completion(.failure(.urlGeneration))
             return nil
         }
-    }
-}
-
-public final class DefaultNetworkSessionManager: NetworkSessionManager {
-    public init(){}
-    
-    @available(macOS 10.15, *)
-    @available(iOS 16, *)
-    public func request(_ request: URLRequest) async throws -> TaskType {
-        let task = TaskType {
-            return try await URLSession.shared.data(for: request)
-        }
-        
-        return task
-    }
-    
-    public func request(_ request: URLRequest, completion: @escaping CompletionHandler) -> any CancellableHttpRequest {
-        let task = URLSession.shared.dataTask(with: request, completionHandler: completion)
-        task.resume()
-        return task
     }
 }
 
