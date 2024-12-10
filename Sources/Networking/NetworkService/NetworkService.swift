@@ -8,8 +8,6 @@
 import Foundation
 import OSLog
 
-extension URLSessionDataTask: CancellableHttpRequest{}
-
 public protocol NetworkService {
     typealias CompletionHandler = (Result<Data?, NetworkError>) -> Void
     typealias TaskType = Task<Data, Error>
