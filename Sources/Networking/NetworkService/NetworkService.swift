@@ -8,24 +8,6 @@
 import Foundation
 import OSLog
 
-public protocol CancellableHttpRequest {
-    func cancel()
-}
-
-public class CancellableHttpRequestCollection {
-    private(set) var requests: [CancellableHttpRequest] = []
-    
-    func add(request: CancellableHttpRequest) {
-        requests.append(request)
-    }
-    
-    func cancelAll() {
-        for request in requests {
-            request.cancel()
-        }
-    }
-}
-
 extension URLSessionDataTask: CancellableHttpRequest{}
 
 public protocol NetworkService {
