@@ -8,29 +8,6 @@
 import Foundation
 import OSLog
 
-public enum NetworkError: Error {
-    case error(statusCode: Int, data: Data?)
-    case notConnected
-    case cancelled
-    case generic(error: Error)
-    case urlGeneration
-}
-
-public extension NetworkError {
-    var isNotFoundError: Bool {
-        hasStatusCode(404)
-    }
-    
-    private func hasStatusCode(_ errorCode: Int) -> Bool {
-        switch self {
-        case .error(let code, _):
-            return code == errorCode
-        default:
-            return false
-        }
-    }
-}
-
 public protocol CancellableHttpRequest {
     func cancel()
 }
