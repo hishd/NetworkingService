@@ -7,32 +7,6 @@
 
 import Foundation
 
-public enum DecodingError: Error {
-    case typeMismatch
-}
-
-public protocol ResponseDecoder {
-    func decode<T: Decodable>(data: Data) throws -> T
-}
-
-public final class JsonResponseDecoder: ResponseDecoder {
-    public init(){}
-    public func decode<T: Decodable>(data: Data) throws -> T {
-        return try JSONDecoder().decode(T.self, from: data)
-    }
-}
-
-public final class RawDataResponseDecoder: ResponseDecoder {
-    public init(){}
-    public func decode<T: Decodable>(data: Data) throws -> T {
-        if T.self is Data.Type, let data = data as? T {
-            return data
-        } else {
-            throw DecodingError.typeMismatch
-        }
-    }
-}
-
 public enum PathType {
     case urlPath(String)
     case path(String)
