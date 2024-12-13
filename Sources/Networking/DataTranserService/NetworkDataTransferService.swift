@@ -7,19 +7,6 @@
 
 import Foundation
 
-public struct ResponseData<T> {
-    private(set) var results: [T]
-    private(set) var errors: [NetworkDataTransferError]
-    
-    mutating func addResult(result: T) {
-        self.results.append(result)
-    }
-    
-    mutating func addError(error: NetworkDataTransferError) {
-        self.errors.append(error)
-    }
-}
-
 public protocol NetworkDataTransferService {
     typealias CompletionHandler<T> = (Result<T, NetworkDataTransferError>) -> Void
     typealias CompletionHandlerCollection<T> = (Result<ResponseData<T>, NetworkDataTransferError>) -> Void
