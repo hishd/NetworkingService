@@ -7,17 +7,6 @@
 
 import Foundation
 
-public protocol NetworkDataTransferErrorLogger {
-    func log(error: Error)
-}
-
-public final class DefaultNetworkDataTransferErrorLogger: NetworkDataTransferErrorLogger {
-    public init(){}
-    public func log(error: any Error) {
-        printIfDebug("\(error)")
-    }
-}
-
 public struct ResponseData<T> {
     private(set) var results: [T]
     private(set) var errors: [NetworkDataTransferError]
