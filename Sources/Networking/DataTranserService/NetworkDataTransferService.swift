@@ -34,6 +34,8 @@ public protocol NetworkDataTransferService {
     func request<T: Decodable, E: RequestableEndpoint>(with endpoints: [E]) async -> TaskTypeCollection<T> where E.ResponseType == T
 }
 
+// MARK: Concrete Implementation
+
 public final class DefaultNetworkDataTransferService {
     private let networkService: NetworkService
     private let logger: NetworkDataTransferErrorLogger
