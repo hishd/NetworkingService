@@ -7,13 +7,6 @@
 
 import Foundation
 
-public enum NetworkDataTransferError: Error {
-    case noResponse
-    case parsing(Error)
-    case networkFailure(NetworkError)
-    case resolvedNetworkFailure(Error)
-}
-
 public protocol NetworkDataTransferQueue {
     func asyncExecute(work: @escaping () -> Void)
 }
