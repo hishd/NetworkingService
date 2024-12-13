@@ -7,16 +7,6 @@
 
 import Foundation
 
-public protocol NetworkDataTransferQueue {
-    func asyncExecute(work: @escaping () -> Void)
-}
-
-extension DispatchQueue: NetworkDataTransferQueue {
-    public func asyncExecute(work: @escaping () -> Void) {
-        async(group: nil, execute: work)
-    }
-}
-
 public protocol NetworkDataTransferErrorLogger {
     func log(error: Error)
 }
