@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import OSLog
 
 public protocol NetworkService {
     typealias CompletionHandler = (Result<Data?, NetworkError>) -> Void
@@ -128,14 +127,4 @@ extension DefaultNetworkService: NetworkService {
             return nil
         }
     }
-}
-
-func printIfDebug(_ text: String) {
-    #if DEBUG
-        #if os(iOS)
-            Logger.viewCycle.error("\(text)")
-        #elseif os(macOS)
-            print("\(text)")
-        #endif
-    #endif
 }
