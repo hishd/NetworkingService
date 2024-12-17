@@ -36,7 +36,7 @@ public protocol CancellableHttpRequest {
 }
 
 public class CancellableHttpRequestCollection {
-    private (set) var requests: [CancellableHttpRequest] = []
+    private(set) var requests: [CancellableHttpRequest] = []
     
     func add(request: CancellableHttpRequest) {
         requests.append(request)
