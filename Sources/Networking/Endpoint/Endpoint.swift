@@ -7,45 +7,14 @@
 
 import Foundation
 
-public enum HTTPMethodType: String {
-    case get = "GET"
-    case head = "HEAD"
-    case post = "POST"
-    case put = "PUT"
-    case patch = "PATCH"
-    case delete = "DELETE"
-    case update = "Update"
-}
-
-public enum DecodingError: Error {
-    case typeMismatch
-}
-
-public protocol ResponseDecoder {
-    func decode<T: Decodable>(data: Data) throws -> T
-}
-
-public final class JsonResponseDecoder: ResponseDecoder {
-    public init(){}
-    public func decode<T: Decodable>(data: Data) throws -> T {
-        return try JSONDecoder().decode(T.self, from: data)
-    }
-}
-
-public final class RawDataResponseDecoder: ResponseDecoder {
-    public init(){}
-    public func decode<T: Decodable>(data: Data) throws -> T {
-        if T.self is Data.Type, let data = data as? T {
-            return data
-        } else {
-            throw DecodingError.typeMismatch
-        }
-    }
-}
-
 public enum PathType {
     case urlPath(String)
     case path(String)
+}
+
+public enum HttpEndpointGenerationError: Error {
+    case componentsError
+    case urlGenerationError
 }
 
 public protocol RequestableEndpoint {
@@ -60,39 +29,6 @@ public protocol RequestableEndpoint {
     var responseDecoder: any ResponseDecoder {get}
     
     func urlRequest(with networkConfig: ApiNetworkConfig?) throws -> URLRequest
-}
-
-public final class ApiEndpoint<T>: RequestableEndpoint {
-    public typealias ResponseType = T
-    
-    public let path: PathType
-    public let method: HTTPMethodType
-    public let headerParameters: [String : String]
-    public let queryParameters: [String : Any]
-    public let bodyParameters: [String : Any]
-    public let responseDecoder: any ResponseDecoder
-    
-    public init(
-        path: PathType,
-        method: HTTPMethodType,
-        headerParameters: [String : String] = [:],
-        queryParameters: [String : Any] = [:],
-        bodyParameters: [String : Any] = [:],
-        responseDecoder: any ResponseDecoder = JsonResponseDecoder()
-    ) {
-        self.path = path
-        self.method = method
-        self.headerParameters = headerParameters
-        self.queryParameters = queryParameters
-        self.bodyParameters = bodyParameters
-        self.responseDecoder = responseDecoder
-    }
-}
-
-
-public enum HttpEndpointGenerationError: Error {
-    case componentsError
-    case urlGenerationError
 }
 
 public extension RequestableEndpoint {
@@ -150,5 +86,34 @@ public extension RequestableEndpoint {
         urlRequest.allHTTPHeaderFields = allHeaders
         
         return urlRequest
+    }
+}
+
+// MARK: Concrete Implementation
+
+public final class ApiEndpoint<T>: RequestableEndpoint {
+    public typealias ResponseType = T
+    
+    public let path: PathType
+    public let method: HTTPMethodType
+    public let headerParameters: [String : String]
+    public let queryParameters: [String : Any]
+    public let bodyParameters: [String : Any]
+    public let responseDecoder: any ResponseDecoder
+    
+    public init(
+        path: PathType,
+        method: HTTPMethodType,
+        headerParameters: [String : String] = [:],
+        queryParameters: [String : Any] = [:],
+        bodyParameters: [String : Any] = [:],
+        responseDecoder: any ResponseDecoder = JsonResponseDecoder()
+    ) {
+        self.path = path
+        self.method = method
+        self.headerParameters = headerParameters
+        self.queryParameters = queryParameters
+        self.bodyParameters = bodyParameters
+        self.responseDecoder = responseDecoder
     }
 }
