@@ -7,47 +7,6 @@
 
 import Foundation
 
-public enum NetworkDataTransferError: Error {
-    case noResponse
-    case parsing(Error)
-    case networkFailure(NetworkError)
-    case resolvedNetworkFailure(Error)
-}
-
-public protocol NetworkDataTransferQueue {
-    func asyncExecute(work: @escaping () -> Void)
-}
-
-extension DispatchQueue: NetworkDataTransferQueue {
-    public func asyncExecute(work: @escaping () -> Void) {
-        async(group: nil, execute: work)
-    }
-}
-
-public protocol NetworkDataTransferErrorLogger {
-    func log(error: Error)
-}
-
-public final class DefaultNetworkDataTransferErrorLogger: NetworkDataTransferErrorLogger {
-    public init(){}
-    public func log(error: any Error) {
-        printIfDebug("\(error)")
-    }
-}
-
-public struct ResponseData<T> {
-    private(set) var results: [T]
-    private(set) var errors: [NetworkDataTransferError]
-    
-    mutating func addResult(result: T) {
-        self.results.append(result)
-    }
-    
-    mutating func addError(error: NetworkDataTransferError) {
-        self.errors.append(error)
-    }
-}
-
 public protocol NetworkDataTransferService {
     typealias CompletionHandler<T> = (Result<T, NetworkDataTransferError>) -> Void
     typealias CompletionHandlerCollection<T> = (Result<ResponseData<T>, NetworkDataTransferError>) -> Void
@@ -74,6 +33,8 @@ public protocol NetworkDataTransferService {
     @available(macOS 10.15, *)
     func request<T: Decodable, E: RequestableEndpoint>(with endpoints: [E]) async -> TaskTypeCollection<T> where E.ResponseType == T
 }
+
+// MARK: Concrete Implementation
 
 public final class DefaultNetworkDataTransferService {
     private let networkService: NetworkService
