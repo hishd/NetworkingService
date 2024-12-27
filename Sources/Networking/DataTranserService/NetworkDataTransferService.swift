@@ -68,6 +68,35 @@ public final class DefaultNetworkDataTransferService {
             group.leave()
         }
     }
+    
+    
+    private func decode<T: Decodable>(data: Data?, decoder: ResponseDecoder) -> Result<T, NetworkDataTransferError> {
+        do {
+            guard let data = data else {
+                return .failure(NetworkDataTransferError.noResponse)
+            }
+            
+            let decoded: T = try decoder.decode(data: data)
+            return .success(decoded)
+        } catch {
+            self.logger.log(error: error)
+            return .failure(NetworkDataTransferError.parsing(error))
+        }
+    }
+    
+    private func decode<T: Decodable>(data: Data?, decoder: ResponseDecoder) throws -> T {
+        do {
+            guard let data = data else {
+                throw NetworkDataTransferError.noResponse
+            }
+            
+            let decoded: T = try decoder.decode(data: data)
+            return decoded
+        } catch {
+            self.logger.log(error: error)
+            throw NetworkDataTransferError.parsing(error)
+        }
+    }
 }
 
 extension DefaultNetworkDataTransferService: NetworkDataTransferService {
@@ -99,6 +128,36 @@ extension DefaultNetworkDataTransferService: NetworkDataTransferService {
         }
         
         return requestCollection
+    }
+    
+    public func request<T: Decodable, E: RequestableEndpoint>(
+        with endpoint: E,
+        on queue: (any NetworkDataTransferQueue)? = nil,
+        completion: @escaping (Result<T, NetworkDataTransferError>) -> Void
+    ) -> (any CancellableHttpRequest)? where E.ResponseType == T {
+        
+        return networkService.request(endpoint: endpoint) { result in
+            let completionResult: Result<T, NetworkDataTransferError>
+            
+            defer {
+                if let queue = queue {
+                    queue.asyncExecute {
+                        completion(completionResult)
+                    }
+                }
+                completion(completionResult)
+            }
+            
+            switch result {
+            case .success(let data):
+                let result: Result<T, NetworkDataTransferError> = self.decode(data: data, decoder: endpoint.responseDecoder)
+                completionResult = result
+            case .failure(let error):
+                self.logger.log(error: error)
+                completionResult = .failure(.networkFailure(error))
+            }
+        }
+        
     }
     
     @available(macOS 10.15, *)
@@ -139,63 +198,5 @@ extension DefaultNetworkDataTransferService: NetworkDataTransferService {
         }
         
         return task
-    }
-    
-    public func request<T: Decodable, E: RequestableEndpoint>(
-        with endpoint: E,
-        on queue: (any NetworkDataTransferQueue)? = nil,
-        completion: @escaping (Result<T, NetworkDataTransferError>) -> Void
-    ) -> (any CancellableHttpRequest)? where E.ResponseType == T {
-        
-        return networkService.request(endpoint: endpoint) { result in
-            let completionResult: Result<T, NetworkDataTransferError>
-            
-            defer {
-                if let queue = queue {
-                    queue.asyncExecute {
-                        completion(completionResult)
-                    }
-                }
-                completion(completionResult)
-            }
-            
-            switch result {
-            case .success(let data):
-                let result: Result<T, NetworkDataTransferError> = self.decode(data: data, decoder: endpoint.responseDecoder)
-                completionResult = result
-            case .failure(let error):
-                self.logger.log(error: error)
-                completionResult = .failure(.networkFailure(error))
-            }
-        }
-        
-    }
-    
-    private func decode<T: Decodable>(data: Data?, decoder: ResponseDecoder) -> Result<T, NetworkDataTransferError> {
-        do {
-            guard let data = data else {
-                return .failure(NetworkDataTransferError.noResponse)
-            }
-            
-            let decoded: T = try decoder.decode(data: data)
-            return .success(decoded)
-        } catch {
-            self.logger.log(error: error)
-            return .failure(NetworkDataTransferError.parsing(error))
-        }
-    }
-    
-    private func decode<T: Decodable>(data: Data?, decoder: ResponseDecoder) throws -> T {
-        do {
-            guard let data = data else {
-                throw NetworkDataTransferError.noResponse
-            }
-            
-            let decoded: T = try decoder.decode(data: data)
-            return decoded
-        } catch {
-            self.logger.log(error: error)
-            throw NetworkDataTransferError.parsing(error)
-        }
     }
 }
