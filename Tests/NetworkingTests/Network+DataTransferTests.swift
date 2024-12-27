@@ -132,7 +132,7 @@ final class NetworkingTests: XCTestCase {
         let index = 9
         let key: KeyPath<ResponseObject, String> = \.name
         
-        let task = await networkDataTransferService.request(with: testEndpoints)
+        let task: Task<[ResponseObject], Error> = await networkDataTransferService.request(with: testEndpoints)
         
         testEndpoints.forEach { endpoint in
             print("=======Endpoint \(endpoint.path)=======")
@@ -152,7 +152,7 @@ final class NetworkingTests: XCTestCase {
     @available(iOS 16, *)
     func test_async_service_returns_result() async {
         let expectedCount = 10
-        let task = await networkDataTransferService.request(with: endpoint)
+        let task: Task<[ResponseObject], Error> = await networkDataTransferService.request(with: endpoint)
         
         do {
             let items: [ResponseObject] = try await task.value
