@@ -9,6 +9,7 @@ import Foundation
 
 public protocol NetworkService {
     typealias CompletionHandler = (Result<Data?, NetworkError>) -> Void
+    @available(macOS 10.15, *)
     typealias TaskType = Task<Data, Error>
     
     func request(endpoint: any RequestableEndpoint, completion: @escaping CompletionHandler) -> CancellableHttpRequest?
