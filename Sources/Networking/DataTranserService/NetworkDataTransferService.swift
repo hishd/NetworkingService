@@ -10,7 +10,9 @@ import Foundation
 public protocol NetworkDataTransferService {
     typealias CompletionHandler<T> = (Result<T, NetworkDataTransferError>) -> Void
     typealias CompletionHandlerCollection<T> = (Result<ResponseData<T>, NetworkDataTransferError>) -> Void
+    @available(macOS 10.15, *)
     typealias TaskType<T> = Task<T, Error>
+    @available(macOS 10.15, *)
     typealias TaskTypeCollection<T> = Task<[T], Error>
     
     func request<T: Decodable, E: RequestableEndpoint>(
