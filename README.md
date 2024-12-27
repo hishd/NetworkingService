@@ -2,7 +2,7 @@
 
 <p>
 <img src="https://img.shields.io/badge/iOS-14.0-blue">
-<img src="https://img.shields.io/badge/Latest-1.0.4-green">
+<img src="https://img.shields.io/badge/Latest-1.0.5-green">
 </p>
 
 >Networking service is a http networking library developed on top of swift URLSession api. The library is capable of performing http network requests to REST api endpoints.
