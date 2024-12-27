@@ -26,6 +26,7 @@ public protocol RequestableEndpoint {
     var headerParameters: [String: String] {get}
     var queryParameters: [String: Any] {get}
     var bodyParameters: [String: Any] {get}
+    var timeout: TimeInterval {get}
     var responseDecoder: any ResponseDecoder {get}
     
     func urlRequest(with networkConfig: ApiNetworkConfig?) throws -> URLRequest
@@ -84,6 +85,7 @@ public extension RequestableEndpoint {
         
         urlRequest.httpMethod = self.method.rawValue
         urlRequest.allHTTPHeaderFields = allHeaders
+        urlRequest.timeoutInterval = timeout
         
         return urlRequest
     }
@@ -99,6 +101,7 @@ public final class ApiEndpoint<T>: RequestableEndpoint {
     public let headerParameters: [String : String]
     public let queryParameters: [String : Any]
     public let bodyParameters: [String : Any]
+    public let timeout: TimeInterval
     public let responseDecoder: any ResponseDecoder
     
     public init(
@@ -107,6 +110,7 @@ public final class ApiEndpoint<T>: RequestableEndpoint {
         headerParameters: [String : String] = [:],
         queryParameters: [String : Any] = [:],
         bodyParameters: [String : Any] = [:],
+        timeout: TimeInterval = 60.0,
         responseDecoder: any ResponseDecoder = JsonResponseDecoder()
     ) {
         self.path = path
@@ -114,6 +118,7 @@ public final class ApiEndpoint<T>: RequestableEndpoint {
         self.headerParameters = headerParameters
         self.queryParameters = queryParameters
         self.bodyParameters = bodyParameters
+        self.timeout = timeout
         self.responseDecoder = responseDecoder
     }
 }

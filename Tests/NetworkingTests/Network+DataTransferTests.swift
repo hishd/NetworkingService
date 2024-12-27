@@ -215,4 +215,35 @@ final class NetworkingTests: XCTestCase {
         
         wait(for: [expectation], timeout: 5.0)
     }
+    
+    func test_request_timeout() {
+        
+        struct DelayedResponse: Decodable {
+            let about: String
+        }
+        
+        let delay: Int = 5000
+        let endpoint: ApiEndpoint<DelayedResponse> = .init(path: .urlPath("https://fakeresponder.com/?sleep=\(delay)"), method: .get, queryParameters: ["sleep": delay], timeout: 2.0)
+        let service: DefaultNetworkService = .init(networkConfig: nil, sessionManagerType: .defaultType, loggerType: .defaultType)
+        let networkDataTransferService: DefaultNetworkDataTransferService = .init(networkService: service, logger: DefaultNetworkDataTransferErrorLogger())
+        
+        let expectation = expectation(description: "Expect timeout error")
+        
+        let _ = networkDataTransferService.request(with: endpoint) { result in
+            switch result {
+            case .success(_):
+                XCTFail("Network request should timeout")
+            case .failure(let error):
+                if case let .networkFailure(error) = error, case .timedOut = error {
+                    XCTAssertTrue(true, "Request timed out")
+                } else {
+                    XCTFail("Network request failed with unexpected error: \(error)")
+                }
+            }
+            
+            expectation.fulfill()
+        }
+        
+        wait(for: [expectation], timeout: 5.0)
+    }
 }
