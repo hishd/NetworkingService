@@ -31,9 +31,17 @@ public protocol NetworkDataTransferService: AnyObject {
     @available(iOS 16, *)
     func request<T: Decodable, E: RequestableEndpoint>(with endpoint: E) async -> TaskType<T> where E.ResponseType == T
     
+    @available(macOS 10.15, *)
+    @available(iOS 16, *)
+    func request<T: Decodable, E: RequestableEndpoint>(with endpoint: E) async throws -> T where E.ResponseType == T
+    
     @available(iOS 16, *)
     @available(macOS 10.15, *)
     func request<T: Decodable, E: RequestableEndpoint>(with endpoints: [E]) async -> TaskTypeCollection<T> where E.ResponseType == T
+    
+    @available(iOS 16, *)
+    @available(macOS 10.15, *)
+    func request<T: Decodable, E: RequestableEndpoint>(with endpoints: [E]) async throws -> [T] where E.ResponseType == T
 }
 
 // MARK: Concrete Implementation
@@ -66,6 +74,35 @@ public final class DefaultNetworkDataTransferService {
             }
             
             group.leave()
+        }
+    }
+    
+    
+    private func decode<T: Decodable>(data: Data?, decoder: ResponseDecoder) -> Result<T, NetworkDataTransferError> {
+        do {
+            guard let data = data else {
+                return .failure(NetworkDataTransferError.noResponse)
+            }
+            
+            let decoded: T = try decoder.decode(data: data)
+            return .success(decoded)
+        } catch {
+            self.logger.log(error: error)
+            return .failure(NetworkDataTransferError.parsing(error))
+        }
+    }
+    
+    private func decode<T: Decodable>(data: Data?, decoder: ResponseDecoder) throws -> T {
+        do {
+            guard let data = data else {
+                throw NetworkDataTransferError.noResponse
+            }
+            
+            let decoded: T = try decoder.decode(data: data)
+            return decoded
+        } catch {
+            self.logger.log(error: error)
+            throw NetworkDataTransferError.parsing(error)
         }
     }
 }
@@ -101,46 +138,6 @@ extension DefaultNetworkDataTransferService: NetworkDataTransferService {
         return requestCollection
     }
     
-    @available(macOS 10.15, *)
-    @available(iOS 16, *)
-    public func request<T: Decodable, E: RequestableEndpoint>(with endpoints: [E]) async -> TaskTypeCollection<T> where T == E.ResponseType {
-        
-        let task: TaskTypeCollection = Task {
-            let responseData = try await withThrowingTaskGroup(of: T.self, returning: [T].self) { taskGroup in
-                for endpoint in endpoints {
-                    taskGroup.addTask {
-                        try await self.request(with: endpoint).value
-                    }
-                }
-                
-                var data: [T] = []
-                
-                for try await item in taskGroup {
-                    data.append(item)
-                }
-                
-                return data
-            }
-            
-            return responseData
-        }
-        
-        return task
-    }
-    
-    @available(macOS 10.15, *)
-    @available(iOS 16, *)
-    public func request<T:Decodable, E: RequestableEndpoint>(with endpoint: E) async -> TaskType<T> where T == E.ResponseType {
-        let task = Task {
-            let responseData = try await networkService.request(endpoint: endpoint).value
-            let decodedData:T = try self.decode(data: responseData, decoder: endpoint.responseDecoder)
-            
-            return decodedData
-        }
-        
-        return task
-    }
-    
     public func request<T: Decodable, E: RequestableEndpoint>(
         with endpoint: E,
         on queue: (any NetworkDataTransferQueue)? = nil,
@@ -171,31 +168,74 @@ extension DefaultNetworkDataTransferService: NetworkDataTransferService {
         
     }
     
-    private func decode<T: Decodable>(data: Data?, decoder: ResponseDecoder) -> Result<T, NetworkDataTransferError> {
-        do {
-            guard let data = data else {
-                return .failure(NetworkDataTransferError.noResponse)
+    @available(macOS 10.15, *)
+    @available(iOS 16, *)
+    public func request<T: Decodable, E: RequestableEndpoint>(with endpoints: [E]) async -> TaskTypeCollection<T> where T == E.ResponseType {
+        
+        let task: TaskTypeCollection = Task {
+            let responseData = try await withThrowingTaskGroup(of: T.self, returning: [T].self) { taskGroup in
+                for endpoint in endpoints {
+                    taskGroup.addTask {
+                        try await self.request(with: endpoint).value
+                    }
+                }
+                
+                var data: [T] = []
+                
+                for try await item in taskGroup {
+                    data.append(item)
+                }
+                
+                return data
             }
             
-            let decoded: T = try decoder.decode(data: data)
-            return .success(decoded)
-        } catch {
-            self.logger.log(error: error)
-            return .failure(NetworkDataTransferError.parsing(error))
+            return responseData
         }
+        
+        return task
     }
     
-    private func decode<T: Decodable>(data: Data?, decoder: ResponseDecoder) throws -> T {
-        do {
-            guard let data = data else {
-                throw NetworkDataTransferError.noResponse
+    @available(macOS 10.15, *)
+    @available(iOS 16, *)
+    public func request<T: Decodable, E: RequestableEndpoint>(with endpoints: [E]) async throws -> [T] where T == E.ResponseType {
+        let responseData = try await withThrowingTaskGroup(of: T.self, returning: [T].self) { taskGroup in
+            for endpoint in endpoints {
+                taskGroup.addTask {
+                    try await self.request(with: endpoint).value
+                }
             }
             
-            let decoded: T = try decoder.decode(data: data)
-            return decoded
-        } catch {
-            self.logger.log(error: error)
-            throw NetworkDataTransferError.parsing(error)
+            var data: [T] = []
+            
+            for try await item in taskGroup {
+                data.append(item)
+            }
+            
+            return data
         }
+        
+        return responseData
+    }
+    
+    @available(macOS 10.15, *)
+    @available(iOS 16, *)
+    public func request<T:Decodable, E: RequestableEndpoint>(with endpoint: E) async -> TaskType<T> where T == E.ResponseType {
+        let task = Task {
+            let responseData = try await networkService.request(endpoint: endpoint).value
+            let decodedData:T = try self.decode(data: responseData, decoder: endpoint.responseDecoder)
+            
+            return decodedData
+        }
+        
+        return task
+    }
+    
+    @available(macOS 10.15, *)
+    @available(iOS 16, *)
+    public func request<T:Decodable, E: RequestableEndpoint>(with endpoint: E) async throws -> T where T == E.ResponseType {
+        let responseData = try await networkService.request(endpoint: endpoint).value
+        let decodedData:T = try self.decode(data: responseData, decoder: endpoint.responseDecoder)
+        
+        return decodedData
     }
 }
