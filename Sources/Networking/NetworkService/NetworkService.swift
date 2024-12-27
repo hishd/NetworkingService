@@ -16,6 +16,10 @@ public protocol NetworkService {
     @available(iOS 16, *)
     @available(macOS 10.15, *)
     func request(endpoint: any RequestableEndpoint) async -> TaskType
+    @available(iOS 16, *)
+    @available(macOS 10.15, *)
+    func request(endpoint: any RequestableEndpoint) async throws -> Data
+    
 }
 
 //MARK: Concrete Implementation
@@ -65,24 +69,30 @@ public final class DefaultNetworkService {
     @available(iOS 16, *)
     private func request(request: URLRequest) async throws -> TaskType {
         let task = TaskType {
-            do {
-                let (data, response) = try await sessionManagerType.sessionManager.request(request).value
-    
-                if let response = response as? HTTPURLResponse, !(200...300).contains(response.statusCode) {
-                    let error: NetworkError = .error(statusCode: response.statusCode, data: data)
-                    self.loggerType.logger.log(error: error)
-                    throw error
-                }
-    
-                self.loggerType.logger.log(responseData: data, response: response)
-                return data
-            } catch {
-                self.loggerType.logger.log(error: error)
-                throw self.resolve(error: error)
-            }
+            try await self.request(request: request)
         }
         
         return task
+    }
+    
+    @available(macOS 10.15, *)
+    @available(iOS 16, *)
+    private func request(request: URLRequest) async throws -> Data {
+        do {
+            let (data, response) = try await sessionManagerType.sessionManager.request(request).value
+
+            if let response = response as? HTTPURLResponse, !(200...300).contains(response.statusCode) {
+                let error: NetworkError = .error(statusCode: response.statusCode, data: data)
+                self.loggerType.logger.log(error: error)
+                throw error
+            }
+
+            self.loggerType.logger.log(responseData: data, response: response)
+            return data
+        } catch {
+            self.loggerType.logger.log(error: error)
+            throw self.resolve(error: error)
+        }
     }
     
     private func resolve(error: Error) -> NetworkError {
@@ -116,6 +126,19 @@ extension DefaultNetworkService: NetworkService {
         }
         
         return task
+    }
+    
+    @available(macOS 10.15, *)
+    @available(iOS 16, *)
+    public func request(endpoint: any RequestableEndpoint) async throws -> Data {
+        do {
+            let request = try endpoint.urlRequest(with: networkConfig)
+            return try await self.request(request: request)
+        } catch let error as NetworkError {
+            throw error
+        } catch {
+            throw NetworkError.urlGeneration
+        }
     }
     
     public func request(endpoint: any RequestableEndpoint, completion: @escaping CompletionHandler) -> (any CancellableHttpRequest)? {
