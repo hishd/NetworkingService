@@ -89,6 +89,8 @@ public final class DefaultNetworkService {
         switch code {
         case .notConnectedToInternet:
             return .notConnected
+        case .timedOut:
+            return .timedOut
         case .cancelled:
             return .cancelled
         default:
