@@ -31,9 +31,17 @@ public protocol NetworkDataTransferService: AnyObject {
     @available(iOS 16, *)
     func request<T: Decodable, E: RequestableEndpoint>(with endpoint: E) async -> TaskType<T> where E.ResponseType == T
     
+    @available(macOS 10.15, *)
+    @available(iOS 16, *)
+    func request<T: Decodable, E: RequestableEndpoint>(with endpoint: E) async throws -> T where E.ResponseType == T
+    
     @available(iOS 16, *)
     @available(macOS 10.15, *)
     func request<T: Decodable, E: RequestableEndpoint>(with endpoints: [E]) async -> TaskTypeCollection<T> where E.ResponseType == T
+    
+    @available(iOS 16, *)
+    @available(macOS 10.15, *)
+    func request<T: Decodable, E: RequestableEndpoint>(with endpoints: [E]) async throws -> [T] where E.ResponseType == T
 }
 
 // MARK: Concrete Implementation
@@ -189,6 +197,28 @@ extension DefaultNetworkDataTransferService: NetworkDataTransferService {
     
     @available(macOS 10.15, *)
     @available(iOS 16, *)
+    public func request<T: Decodable, E: RequestableEndpoint>(with endpoints: [E]) async throws -> [T] where T == E.ResponseType {
+        let responseData = try await withThrowingTaskGroup(of: T.self, returning: [T].self) { taskGroup in
+            for endpoint in endpoints {
+                taskGroup.addTask {
+                    try await self.request(with: endpoint).value
+                }
+            }
+            
+            var data: [T] = []
+            
+            for try await item in taskGroup {
+                data.append(item)
+            }
+            
+            return data
+        }
+        
+        return responseData
+    }
+    
+    @available(macOS 10.15, *)
+    @available(iOS 16, *)
     public func request<T:Decodable, E: RequestableEndpoint>(with endpoint: E) async -> TaskType<T> where T == E.ResponseType {
         let task = Task {
             let responseData = try await networkService.request(endpoint: endpoint).value
@@ -198,5 +228,14 @@ extension DefaultNetworkDataTransferService: NetworkDataTransferService {
         }
         
         return task
+    }
+    
+    @available(macOS 10.15, *)
+    @available(iOS 16, *)
+    public func request<T:Decodable, E: RequestableEndpoint>(with endpoint: E) async throws -> T where T == E.ResponseType {
+        let responseData = try await networkService.request(endpoint: endpoint).value
+        let decodedData:T = try self.decode(data: responseData, decoder: endpoint.responseDecoder)
+        
+        return decodedData
     }
 }
